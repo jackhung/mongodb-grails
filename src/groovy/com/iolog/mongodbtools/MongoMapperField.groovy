@@ -38,6 +38,7 @@ class MongoMapperField
     */
    boolean isMapped
 
+   boolean isMongoRef
 
    public String toString()
    {

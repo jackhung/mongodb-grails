@@ -284,6 +284,15 @@ public class MongoDbWrapper implements InitializingBean
 				return mapper.buildMongoDoc(delegate)
 			}
 		}
+
+		clazz.metaClass.toMongoRef = {
+			def mapper = this.getMapperForClass(clazz)
+//new DBRef(mongo.devsrv.getDB("demoapp"), "users", umap."paul"._id)
+			// mongos., "users", delegate._id)
+			println "======= toMongoRef ${mapper}"
+			println "======= toMongoRef ${this.users.getDB()}"
+			new com.mongodb.DBRef(this.users.getDB(), "users", new com.mongodb.ObjectId(delegate._id))
+		}
 	}
 
 	/**
@@ -354,6 +363,7 @@ public class MongoDbWrapper implements InitializingBean
 				if (it instanceof BasicDBObject || it instanceof BasicDBList) oList.add(it.toObject())
 				else oList.add(it)
 			}
+			return oList
 		}
 
 		Collection.metaClass.toMongoDoc = {
@@ -395,7 +405,16 @@ public class MongoDbWrapper implements InitializingBean
 				// --------------------------------------------------------------------
 				if (mmf.mapper)
 				{
-					obj."${mmf.domainFieldName}" = fieldVal.toObject()
+if (mmf.isMongoRef) {
+  if(fieldVal) {
+   if(com.mongodb.DBRef.isAssignableFrom(fieldVal.getClass())) { 
+println "====== toObject ${mmf.mongoFieldName} : isMongoRef"
+	obj."${mmf.domainFieldName}" = fieldVal.fetch().toObject()
+	continue
+   }
+  }
+}
+					obj."${mmf.domainFieldName}" = fieldVal?.toObject()
 					continue
 				}
 

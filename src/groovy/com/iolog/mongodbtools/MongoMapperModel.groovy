@@ -20,7 +20,7 @@ package com.iolog.mongodbtools
 
  */
 
-
+import grails.mongo.MongoRef
 import org.codehaus.groovy.grails.commons.GrailsClassUtils
 import com.mongodb.BasicDBObject
 
@@ -65,6 +65,10 @@ class MongoMapperModel {
 
          mmf.domainFieldName = fieldName
          mmf.mongoFieldName = alias
+if (this.clazz.getDeclaredField(fieldName).isAnnotationPresent(MongoRef.class)) {
+	println "============= MongoRef: $fieldName"
+	mmf.isMongoRef = true
+}
 
          fields[idx++] = mmf
       }
@@ -85,6 +89,10 @@ class MongoMapperModel {
       doc.put("_t",typeName)
       fields.each { f ->
          def val = o."${f.domainFieldName}"
+if (f.isMongoRef) {
+println "======= buildMongoDoc ${f.mongoFieldName}: reference"
+
+}
          if ( val )
          {
             if ( f.mapper )
@@ -95,6 +103,10 @@ class MongoMapperModel {
                }
                else
                {
+if (f.isMongoRef) {
+println "======= build DBRef for ${f.mongoFieldName}"
+doc.put(f.mongoFieldName, val.toMongoRef())
+} else
                   doc.put( f.mongoFieldName , f.mapper.buildMongoDoc(val))
                }
             }
