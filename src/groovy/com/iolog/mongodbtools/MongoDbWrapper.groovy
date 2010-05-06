@@ -33,6 +33,10 @@ import com.mongodb.DB
 import org.springframework.web.multipart.commons.CommonsMultipartFile
 import com.mongodb.gridfs.GridFSInputFile
 import com.mongodb.DBObject
+import com.mongodb.DBRef
+
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * <p>The MongoDbWrapper is exposed to Grails applications as a Spring bean called 'mongo'.
@@ -159,6 +163,7 @@ import com.mongodb.DBObject
  */
 public class MongoDbWrapper implements InitializingBean
 {
+	private static final org.slf4j.Logger log = LoggerFactory.getLogger(MongoDbWrapper)
 	def grailsApplication
 
 	Map<String, Mongo> mongos = new HashMap<String, Mongo>();
@@ -287,11 +292,7 @@ public class MongoDbWrapper implements InitializingBean
 
 		clazz.metaClass.toMongoRef = {
 			def mapper = this.getMapperForClass(clazz)
-//new DBRef(mongo.devsrv.getDB("demoapp"), "users", umap."paul"._id)
-			// mongos., "users", delegate._id)
-			println "======= toMongoRef ${mapper}"
-			println "======= toMongoRef ${this.users.getDB()}"
-			new com.mongodb.DBRef(this.users.getDB(), "users", new com.mongodb.ObjectId(delegate._id))
+			new DBRef(this."$mapper.collectionName".getDB(), "users", new ObjectId(delegate._id))
 		}
 	}
 
@@ -405,15 +406,14 @@ public class MongoDbWrapper implements InitializingBean
 				// --------------------------------------------------------------------
 				if (mmf.mapper)
 				{
-if (mmf.isMongoRef) {
-  if(fieldVal) {
-   if(com.mongodb.DBRef.isAssignableFrom(fieldVal.getClass())) { 
-println "====== toObject ${mmf.mongoFieldName} : isMongoRef"
-	obj."${mmf.domainFieldName}" = fieldVal.fetch().toObject()
-	continue
-   }
-  }
-}
+					if (mmf.isMongoRef) {
+						if(fieldVal &&
+							DBRef.isAssignableFrom(fieldVal?.getClass())) { 
+								log.debug "toObject ${mmf.mongoFieldName} : isMongoRef"
+								obj."${mmf.domainFieldName}" = fieldVal.fetch().toObject()
+								continue
+						}
+					}
 					obj."${mmf.domainFieldName}" = fieldVal?.toObject()
 					continue
 				}

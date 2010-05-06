@@ -21,21 +21,28 @@ package com.iolog.mongodbtools
  */
 
 import grails.mongo.MongoRef
+import grails.mongo.MongoMapped
 import org.codehaus.groovy.grails.commons.GrailsClassUtils
 import com.mongodb.BasicDBObject
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * @author Mark Priatel <mark@iolog.com>
  */
 class MongoMapperModel {
-
+	private static final Logger log = LoggerFactory.getLogger(MongoMapperModel)
+	
    Class clazz
    MongoMapperField[] fields
    String typeName
+   String collectionName
 
    public MongoMapperModel(Class clazz, Map fieldNames)
    {
       this.clazz = clazz;
+      collectionName = clazz.getAnnotation(MongoMapped.class)?.value()
+      log.debug "$clazz.name collectionName = $collectionName"
       setMappedFields( fieldNames )
    }
 
@@ -65,10 +72,7 @@ class MongoMapperModel {
 
          mmf.domainFieldName = fieldName
          mmf.mongoFieldName = alias
-if (this.clazz.getDeclaredField(fieldName).isAnnotationPresent(MongoRef.class)) {
-	println "============= MongoRef: $fieldName"
-	mmf.isMongoRef = true
-}
+         mmf.isMongoRef = this.clazz.getDeclaredField(fieldName).isAnnotationPresent(MongoRef.class)
 
          fields[idx++] = mmf
       }
@@ -89,10 +93,6 @@ if (this.clazz.getDeclaredField(fieldName).isAnnotationPresent(MongoRef.class)) 
       doc.put("_t",typeName)
       fields.each { f ->
          def val = o."${f.domainFieldName}"
-if (f.isMongoRef) {
-println "======= buildMongoDoc ${f.mongoFieldName}: reference"
-
-}
          if ( val )
          {
             if ( f.mapper )
@@ -103,11 +103,11 @@ println "======= buildMongoDoc ${f.mongoFieldName}: reference"
                }
                else
                {
-if (f.isMongoRef) {
-println "======= build DBRef for ${f.mongoFieldName}"
-doc.put(f.mongoFieldName, val.toMongoRef())
-} else
-                  doc.put( f.mongoFieldName , f.mapper.buildMongoDoc(val))
+            	   if (f.isMongoRef) {
+            		   log.debug "build DBRef for field: ${f.mongoFieldName}"
+            		   doc.put(f.mongoFieldName, val.toMongoRef())
+            	   } else
+            		   doc.put( f.mongoFieldName , f.mapper.buildMongoDoc(val))
                }
             }
             else if ( val instanceof Collection )
